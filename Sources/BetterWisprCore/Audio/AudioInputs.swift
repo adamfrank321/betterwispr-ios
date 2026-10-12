@@ -1,5 +1,7 @@
 @preconcurrency import AVFoundation
+#if os(macOS)
 import CoreAudio
+#endif
 import Foundation
 
 /// A microphone keyed by its Core Audio UID, so a saved choice survives unplugging and reconnecting.
@@ -13,6 +15,7 @@ public struct AudioInputDevice: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+#if os(macOS)
 public enum AudioInputs {
     /// Every connected device with an input stream, excluding private aggregates such as BetterWispr's system audio tap.
     public static func available() -> [AudioInputDevice] { inputs().map(\.device) }
@@ -202,3 +205,4 @@ public final class AudioInputObserver {
         }
     }
 }
+#endif

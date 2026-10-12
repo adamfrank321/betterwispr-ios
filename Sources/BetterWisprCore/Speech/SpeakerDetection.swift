@@ -17,9 +17,14 @@ public enum SpeakerDetection {
         OfflineDiarizerModels.defaultModelsDirectory().appending(path: Repo.diarizer.folderName)
     }
 
-    /// Apple fixed a crash in this pipeline's Core ML path in macOS 15 (FluidAudio issue 878).
+    /// Apple fixed a crash in this pipeline's Core ML path in macOS 15 and iOS 18, released together (FluidAudio issue 878).
     public static var isSupported: Bool {
-        ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 15, minorVersion: 0, patchVersion: 0))
+        #if os(macOS)
+        let major = 15
+        #else
+        let major = 18
+        #endif
+        return ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: major, minorVersion: 0, patchVersion: 0))
     }
 
     public static var isReady: Bool { isSupported && isInstalled() }

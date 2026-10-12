@@ -1,3 +1,4 @@
+#if os(macOS)
 import CoreAudio
 import Foundation
 
@@ -78,3 +79,4 @@ public final class MicrophoneActivityObserver {
         }
     }
 }
+#endif

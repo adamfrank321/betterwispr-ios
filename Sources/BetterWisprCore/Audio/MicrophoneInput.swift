@@ -1,3 +1,4 @@
+#if os(macOS)
 @preconcurrency import AVFoundation
 import AudioToolbox
 import Foundation
@@ -237,3 +238,4 @@ private final class AudioQueueMicrophone: @unchecked Sendable {
         }
     }
 }
+#endif

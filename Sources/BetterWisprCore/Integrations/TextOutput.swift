@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ApplicationServices
 
@@ -77,3 +78,4 @@ public enum OutputError: LocalizedError {
     case clipboard
     public var errorDescription: String? { "Could not write to the clipboard. Your transcript is still available in BetterWispr." }
 }
+#endif

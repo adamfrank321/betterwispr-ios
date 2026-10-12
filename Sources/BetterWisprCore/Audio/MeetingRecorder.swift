@@ -25,6 +25,7 @@ public struct MeetingAudioChunk: Sendable {
     public let hasSpeech: Bool
 }
 
+#if os(macOS)
 /// Records the microphone as Me and other apps' audio as Them, handing off rotating chunk files for transcription.
 @MainActor
 public final class MeetingRecorder {
@@ -299,6 +300,7 @@ public final class MeetingRecorder {
         onMicrophone?(nil)
     }
 }
+#endif
 
 /// Unchecked because a lock guards the file, counters and chunks against rotation, stop and cancel, and no buffer outlives a write.
 final class MeetingChunkWriter: @unchecked Sendable {

@@ -23,6 +23,7 @@ public enum AudioRecordingError: LocalizedError {
     }
 }
 
+#if os(macOS)
 @MainActor
 public final class AudioRecorder {
     public var onLevel: (@MainActor @Sendable (VoiceLevels) -> Void)?
@@ -200,6 +201,7 @@ public final class AudioRecorder {
         onLevel?(VoiceLevels())
     }
 }
+#endif
 
 /// Waveform levels for consecutive slices of one audio buffer, timestamped across the time it covers.
 public struct VoiceLevels: Sendable, Equatable {

@@ -1,4 +1,13 @@
+#if canImport(Carbon)
 import Carbon.HIToolbox
+#else
+// Carbon's virtual key codes, so saved shortcuts decode identically where Carbon is unavailable (iOS).
+private let kVK_F1 = 0x7A, kVK_F2 = 0x78, kVK_F3 = 0x63, kVK_F4 = 0x76, kVK_F5 = 0x60, kVK_F6 = 0x61, kVK_F7 = 0x62
+private let kVK_F8 = 0x64, kVK_F9 = 0x65, kVK_F10 = 0x6D, kVK_F11 = 0x67, kVK_F12 = 0x6F, kVK_F13 = 0x69, kVK_F14 = 0x6B
+private let kVK_F15 = 0x71, kVK_F16 = 0x6A, kVK_F17 = 0x40, kVK_F18 = 0x4F, kVK_F19 = 0x50, kVK_F20 = 0x5A
+private let kVK_Command = 0x37, kVK_Shift = 0x38, kVK_Option = 0x3A, kVK_Control = 0x3B
+private let kVK_RightCommand = 0x36, kVK_RightShift = 0x3C, kVK_RightOption = 0x3D, kVK_RightControl = 0x3E
+#endif
 import Foundation
 
 public struct ShortcutModifiers: OptionSet, Codable, Hashable, Sendable {

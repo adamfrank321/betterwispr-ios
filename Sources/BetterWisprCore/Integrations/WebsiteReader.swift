@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ApplicationServices
 
@@ -63,3 +64,4 @@ public enum WebsiteReader {
         return nil
     }
 }
+#endif

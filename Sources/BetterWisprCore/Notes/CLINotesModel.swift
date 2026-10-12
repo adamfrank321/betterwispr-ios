@@ -8,12 +8,17 @@ public enum NotesCLI: String, Codable, CaseIterable, Sendable {
     public var loginCommand: String { self == .claudeCode ? "claude auth login" : "codex login" }
     private var command: String { self == .claudeCode ? "claude" : "codex" }
 
+    /// Always nil where apps can't run other programs (iOS), so the CLI reports itself as not installed.
     public var executable: URL? {
+        #if os(macOS)
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]
             + (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map(String.init)
         return paths.filter { $0.hasPrefix("/") }.map { URL(fileURLWithPath: $0).appendingPathComponent(command) }
             .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        #else
+        return nil
+        #endif
     }
 }
 
@@ -98,6 +103,7 @@ struct CLINotesModel: NotesLanguageModel {
     static func run(_ executable: URL, arguments: [String], input: String, cli: NotesCLI,
                     finalMessage: Bool = false, timeout: Duration = .seconds(600),
                     until: (@MainActor (String) -> Bool)? = nil) async throws -> String {
+        #if os(macOS)
         try Task.checkCancellation()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("betterwispr-notes-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -159,8 +165,12 @@ struct CLINotesModel: NotesLanguageModel {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw Self.failure(cli) }
         return text
+        #else
+        throw MeetingNotesError.unavailable("\(cli.name) runs only on a Mac.")
+        #endif
     }
 
+    #if os(macOS)
     @MainActor private static func stop(_ process: Process) async {
         guard process.isRunning else { return }
         process.terminate()
@@ -171,4 +181,5 @@ struct CLINotesModel: NotesLanguageModel {
             await Task.detached { try? await Task.sleep(for: .milliseconds(20)) }.value
         }
     }
+    #endif
 }

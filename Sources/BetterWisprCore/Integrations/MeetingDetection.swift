@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ApplicationServices
 
@@ -97,3 +98,4 @@ public struct DetectedMeeting: Equatable, Sendable {
         self.appID = appID
     }
 }
+#endif

@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "BetterWispr",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .executable(name: "BetterWispr", targets: ["BetterWispr"]),
         .executable(name: "BetterWisprCLI", targets: ["BetterWisprCLI"]),

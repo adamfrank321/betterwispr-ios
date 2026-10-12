@@ -63,7 +63,7 @@ public enum MeetingNotesGenerator {
 
     private static var appleAvailability: NotesAvailability {
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, iOS 26.0, *) {
             switch SystemLanguageModel.default.availability {
             case .available: return .available
             case .unavailable(.deviceNotEligible): return .unavailable("This Mac doesn’t support Apple Intelligence. Choose Claude Code, Codex, Ollama or an API connection in Models.")
@@ -91,7 +91,7 @@ public enum MeetingNotesGenerator {
         case .apple: break
         }
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, *) { return AppleNotesModel(instructions: instructions) }
+        if #available(macOS 26.0, iOS 26.0, *) { return AppleNotesModel(instructions: instructions) }
         #endif
         throw MeetingNotesError.unavailable(appleAvailability.message)
     }
@@ -102,7 +102,7 @@ public enum MeetingNotesGenerator {
         case .ollama(let name): _ = try? await Ollama.send("chat", ["model": name, "messages": [], "options": ["num_ctx": Ollama.contextLength]], timeout: 60)
         case .apple:
             #if canImport(FoundationModels)
-            if #available(macOS 26.0, *), appleAvailability == .available {
+            if #available(macOS 26.0, iOS 26.0, *), appleAvailability == .available {
                 LanguageModelSession(instructions: TranscriptPolisher.instructions).prewarm()
             }
             #endif
@@ -207,7 +207,7 @@ public enum TranscriptChunker {
 }
 
 #if canImport(FoundationModels)
-@available(macOS 26.0, *)
+@available(macOS 26.0, iOS 26.0, *)
 @Generable
 struct GeneratedNotes {
     @Guide(description: "A short, specific title for the meeting, at most eight words")
@@ -222,7 +222,7 @@ struct GeneratedNotes {
     var actionItems: [String]
 }
 
-@available(macOS 26.0, *)
+@available(macOS 26.0, iOS 26.0, *)
 struct AppleNotesModel: NotesLanguageModel {
     var instructions = NotesWriter.instructions
     private static let options = GenerationOptions(temperature: 0.3)

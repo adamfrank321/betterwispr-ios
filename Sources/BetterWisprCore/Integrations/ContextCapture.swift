@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ApplicationServices
 import Carbon
@@ -84,3 +85,4 @@ extension DictationContext {
         return request.results?.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }
 }
+#endif

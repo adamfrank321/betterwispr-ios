@@ -1,4 +1,8 @@
+#if canImport(AppKit)
 import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
 import FluidAudio
 import Foundation
 
@@ -300,7 +304,12 @@ public final class ParakeetProvider: SpeechProvider {
 
     @MainActor
     private static func isSpelledCorrectly(_ words: String) -> Bool {
+        #if canImport(AppKit)
         NSSpellChecker.shared.checkSpelling(of: words, startingAt: 0, language: "en", wrap: false, inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound
+        #else
+        UITextChecker().rangeOfMisspelledWord(in: words, range: NSRange(words.startIndex..., in: words), startingAt: 0,
+                                              wrap: false, language: "en").location == NSNotFound
+        #endif
     }
 }
 

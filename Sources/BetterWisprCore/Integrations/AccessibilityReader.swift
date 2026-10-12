@@ -1,3 +1,4 @@
+#if os(macOS)
 import ApplicationServices
 
 extension AXUIElement {
@@ -30,3 +31,4 @@ extension AXUIElement {
         return (value as! AXValue)
     }
 }
+#endif

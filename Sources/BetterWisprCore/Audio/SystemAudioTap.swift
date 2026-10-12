@@ -1,3 +1,4 @@
+#if os(macOS)
 @preconcurrency import AVFoundation
 import CoreAudio
 import Foundation
@@ -88,3 +89,4 @@ final class SystemAudioTap {
         return status == noErr && objectID != kAudioObjectUnknown ? objectID : nil
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import ApplicationServices
 import Carbon
@@ -115,3 +116,4 @@ struct SettledText {
         return polls == 5 ? value : nil
     }
 }
+#endif
