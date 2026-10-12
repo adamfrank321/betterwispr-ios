@@ -68,8 +68,8 @@ The keyboard can't record. iOS doesn't give keyboard extensions the microphone. 
 
 ## State at last update
 
-- `main`: desktop app with sync, shared library building for iOS, sync engine and tests. CI green.
-- `agent/ios-app`: the iOS app, keyboard and tests on top of `main`. CI builds the app and keyboard and runs 5 iOS unit tests; all pass. Merge into `main` once the latest run is green.
+- `main`: desktop app with sync, shared library building for iOS, sync engine, iOS app. CI green.
+- The iOS app, keyboard and tests are merged into `main`. CI builds the app and keyboard and runs 5 iOS unit tests and 179 desktop tests (12 for sync); all pass.
 - Nothing has been run on a real iPhone or Mac yet. The things most likely to need fixes on a device: the keyboard opening the app (responder-chain call), recording in the background during the warm session, model downloads, and iCloud Drive folder access from the Files picker.
 - One upstream desktop test (`meetingAudioThroughSpeechAndNotesAPIsPersistsAndExports`) failed once and passed on re-run; it shares a static HTTP stub across parallel tests. Not caused by this work.
 

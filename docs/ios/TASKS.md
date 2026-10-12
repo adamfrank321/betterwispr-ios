@@ -11,14 +11,14 @@ Status: [x] done, [~] in progress, [ ] not started. Update on every push.
 6. [x] Shared DictationProcessor; the Mac app uses it with unchanged behaviour
 7. [x] Mac app: Sync card in Settings, sync on launch, after saves, every minute and on activation (built, not device-tested)
 8. [x] iOS app, keyboard, meetings, settings, sync: built in CI on branch `agent/ios-app`
-9. [~] iOS unit tests in the simulator
-10. [ ] Merge `agent/ios-app` into main once tests pass
-11. [ ] App icon and asset catalog (the app has no icon yet)
-12. [ ] Shortcuts action, Action Button and Control Center control (App Intents; widget extension for the control)
+9. [x] iOS unit tests in the simulator (5 passing)
+10. [x] Merged `agent/ios-app` into main
+11. [x] App icon drawn from the desktop mark
+12. [~] Dictate shortcut for Siri, Shortcuts and the Action Button done; Control Center control (needs a widget extension) not started
 13. [ ] Live Activity while the keyboard session or a meeting is recording
 14. [x] Notes API connections can be added on iOS (connections are per device, like the Mac's; keys stay in each keychain)
 15. [ ] Device testing: keyboard handoff, background warm session, model downloads on cellular, sync with the Mac through iCloud Drive
-16. [ ] Independent review of sync and the iOS app
+16. [~] Review: self-review done (damaged-file handling, audio interruptions, stale keyboard results fixed); an independent reviewer should still go over it
 
 ## Open questions for Adam
 
