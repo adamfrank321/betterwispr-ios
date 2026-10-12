@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: Desktop build and tests
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          xcodebuild -version
+          swift --version
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-macos-${{ hashFiles('Package.resolved') }}
+      - name: Build
+        run: swift build
+      - name: Test
+        run: |
+          swift test > test.log 2>&1; status=$?
+          grep -E "error:|failed|passed after|Executed|Test run" test.log | tail -150
+          exit $status
+
+  core-ios:
+    name: Shared library for iOS
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+      - name: Build BetterWisprCore for iOS Simulator
+        run: |
+          xcodebuild -scheme BetterWisprCore \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200
+          exit $status
+
+  ios-app:
+    name: iOS app and keyboard
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip when the iOS project is not present yet
+        id: present
+        run: |
+          if [ -f iOS/project.yml ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Toolchain
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          brew install xcodegen
+      - name: Generate project
+        if: steps.present.outputs.yes == 'true'
+        run: cd iOS && xcodegen generate
+      - name: Build app, keyboard and widgets
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          cd iOS
+          xcodebuild -project BetterWisprMobile.xcodeproj -scheme BetterWisprMobile \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200
+          exit $status
+      - name: Unit tests (simulator)
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          cd iOS
+          SIM=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")))')
+          xcodebuild -project BetterWisprMobile.xcodeproj -scheme BetterWisprMobile \
+            -destination "id=$SIM" -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO test > test.log 2>&1; status=$?
+          grep -E "error:|failed|TEST (SUCCEEDED|FAILED)|Executed" test.log | tail -150
+          exit $status
