@@ -30,8 +30,8 @@ jobs:
         run: swift build
       - name: Test
         run: |
-          swift test > test.log 2>&1; status=$?
-          grep -E "error:|failed|passed after|Executed|Test run" test.log | tail -150
+          status=0; swift test > test.log 2>&1 || status=$?
+          grep -E "error:|failed|passed after|Executed|Test run" test.log | tail -150 || true
           exit $status
 
   core-ios:
@@ -44,11 +44,12 @@ jobs:
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
       - name: Build BetterWisprCore for iOS Simulator
         run: |
+          status=0
           xcodebuild -scheme BetterWisprCore \
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; status=$?
-          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200 || true
           exit $status
 
   ios-app:
@@ -73,19 +74,21 @@ jobs:
         if: steps.present.outputs.yes == 'true'
         run: |
           cd iOS
+          status=0
           xcodebuild -project BetterWisprMobile.xcodeproj -scheme BetterWisprMobile \
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; status=$?
-          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | sort -u | head -200 || true
           exit $status
       - name: Unit tests (simulator)
         if: steps.present.outputs.yes == 'true'
         run: |
           cd iOS
           SIM=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")))')
+          status=0
           xcodebuild -project BetterWisprMobile.xcodeproj -scheme BetterWisprMobile \
             -destination "id=$SIM" -skipPackagePluginValidation -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO test > test.log 2>&1; status=$?
-          grep -E "error:|failed|TEST (SUCCEEDED|FAILED)|Executed" test.log | tail -150
+            CODE_SIGNING_ALLOWED=NO test > test.log 2>&1 || status=$?
+          grep -E "error:|failed|TEST (SUCCEEDED|FAILED)|Executed" test.log | tail -150 || true
           exit $status
