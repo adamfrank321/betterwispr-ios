@@ -151,8 +151,8 @@ private func temporaryFolder() -> URL {
     defer { try? FileManager.default.removeItem(at: journals) }
     var mac = Device("mac", folder: folder, journals: journals)
     var phone = Device("phone", folder: folder, journals: journals)
-    let first = Meeting(title: "Standup")
-    let second = Meeting(title: "Design review")
+    let first = Meeting(title: "Standup", modelName: "Test", language: "en")
+    let second = Meeting(title: "Design review", modelName: "Test", language: "en")
     mac.library.meetings = [first, second]
     try mac.sync()
     try phone.sync()
@@ -194,7 +194,7 @@ private func temporaryFolder() -> URL {
     defer { try? FileManager.default.removeItem(at: journals) }
     var mac = Device("mac", folder: folder, journals: journals)
     var phone = Device("phone", folder: folder, journals: journals)
-    mac.library.meetings = [Meeting(title: "Call")]
+    mac.library.meetings = [Meeting(title: "Call", modelName: "Test", language: "en")]
     try mac.sync()
     let macFiles = Set(folder.paths)
     try phone.sync()
