@@ -18,6 +18,7 @@ struct BridgeState: Codable, Equatable, Sendable {
     var sessionEnds: Date?
     var resultID: UUID?
     var result: String?
+    var resultAt: Date?
     var message: String?
     var level: Float = 0
     var updated = Date.distantPast

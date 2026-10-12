@@ -172,6 +172,7 @@ final class DictationSession {
                 $0.phase = .ready
                 $0.resultID = UUID()
                 $0.result = text
+                $0.resultAt = .now
                 $0.message = nil
                 $0.sessionEnds = sessionEnds
             }

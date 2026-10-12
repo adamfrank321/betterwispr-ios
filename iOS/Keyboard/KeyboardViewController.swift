@@ -78,7 +78,8 @@ final class KeyboardViewController: UIInputViewController {
         viewModel.phase = state.effectivePhase()
         viewModel.message = state.message
         viewModel.level = state.level
-        if let result = bridge.takeResult() {
+        // A result that finished while the keyboard was away is old by now and may belong to another field; leave it in History.
+        if let resultAt = state.resultAt, Date.now.timeIntervalSince(resultAt) < 120, let result = bridge.takeResult() {
             flushCorrection()
             let before = textDocumentProxy.documentContextBeforeInput ?? ""
             let after = textDocumentProxy.documentContextAfterInput ?? ""
@@ -97,7 +98,14 @@ final class KeyboardViewController: UIInputViewController {
         case .transcribing:
             break
         case .ready:
-            bridge.send(BridgeCommand(kind: .start, style: viewModel.style, context: context()))
+            let command = BridgeCommand(kind: .start, style: viewModel.style, context: context())
+            bridge.send(command)
+            // If iOS stopped the app in the background, nobody picks the request up; open the app to start it there.
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let self, self.bridge.pendingCommand()?.id == command.id else { return }
+                self.openApp()
+            }
         case .idle, .failed:
             guard hasFullAccess else {
                 viewModel.message = "Turn on Allow Full Access for BetterWispr in Settings > General > Keyboard > Keyboards."
