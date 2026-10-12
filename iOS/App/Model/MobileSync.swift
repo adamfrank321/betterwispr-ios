@@ -61,6 +61,21 @@ final class MobileSync {
         problem = nil
     }
 
+    @ObservationIgnored private var timer: Task<Void, Never>?
+
+    /// Syncs every minute while the app is open, so changes from the Mac show up without reopening it.
+    func setActive(_ active: Bool) {
+        timer?.cancel()
+        guard active else { return }
+        schedule(after: .zero)
+        timer = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                self?.schedule()
+            }
+        }
+    }
+
     func schedule(after delay: Duration = .seconds(1)) {
         guard isOn else { return }
         scheduled?.cancel()

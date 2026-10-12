@@ -45,10 +45,7 @@ final class MobileModel {
         let loaded = meetingStore.load()
         meetings = loaded.meetings
         unreadableMeetings = Set(loaded.unreadable.compactMap { UUID(uuidString: $0.deletingPathExtension().lastPathComponent) })
-        if !SpeechModel.catalog.contains(where: { $0.id == settings.selectedModelID })
-            && !settings.speechConnections.contains(where: { $0.id.uuidString == settings.selectedModelID }) {
-            settings.selectedModelID = "apple"
-        }
+        if !models.contains(where: { $0.id == settings.selectedModelID }) { settings.selectedModelID = "apple" }
         shareKeyboardSettings()
     }
 

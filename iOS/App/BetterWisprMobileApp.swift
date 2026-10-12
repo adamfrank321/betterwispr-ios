@@ -18,10 +18,10 @@ struct BetterWisprMobileApp: App {
                 .onOpenURL { _ in app.session.handleKeyboardCommand() }
         }
         .onChange(of: scenePhase) { _, phase in
+            app.sync.setActive(phase == .active)
             guard phase == .active else { return }
             app.session.handleKeyboardCommand()
             app.model.learnKeyboardCorrections()
-            app.sync.schedule(after: .zero)
             app.models.warmUp(app.model.selectedModel)
         }
     }

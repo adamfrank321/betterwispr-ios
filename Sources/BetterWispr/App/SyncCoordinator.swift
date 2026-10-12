@@ -18,6 +18,7 @@ final class SyncCoordinator {
     @ObservationIgnored private var scheduled: Task<Void, Never>?
     @ObservationIgnored private var timer: Task<Void, Never>?
     @ObservationIgnored private var again = false
+    @ObservationIgnored private var activation: (any NSObjectProtocol)?
     @ObservationIgnored private let journalURL: URL
     private static let folderKey = "syncFolderPath"
     private static let logger = Logger(subsystem: "org.betterwispr.app", category: "Sync")
@@ -44,7 +45,8 @@ final class SyncCoordinator {
                 self?.schedule()
             }
         }
-        _ = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+        guard activation == nil else { return }
+        activation = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.schedule() }
         }
     }
