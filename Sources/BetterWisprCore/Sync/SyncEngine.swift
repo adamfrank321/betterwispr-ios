@@ -155,9 +155,13 @@ public struct SyncEngine: Sendable {
             }
             for record in records {
                 counter = max(counter, record.stamp.counter)
-                if let current = winners[record.key], current.stamp >= record.stamp { continue }
                 // A record this version can't read must not overwrite a readable one; it waits for this device to update.
                 if !record.deleted, record.item == nil { continue }
+                if let current = winners[record.key], current.stamp >= record.stamp {
+                    // On its first sync this device yields everything it shares a key with, such as preferences,
+                    // so an existing library's settings beat a fresh install's defaults even at equal counters.
+                    guard joining, current.stamp.device == me else { continue }
+                }
                 winners[record.key] = record
             }
         }
