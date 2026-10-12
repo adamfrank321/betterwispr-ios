@@ -139,10 +139,17 @@ public struct SyncEngine: Sendable {
             }
             var records: [SyncRecord] = []
             if let data = try folder.read("\(path)/library.json") {
-                let file = try JSONDecoder().decode(LibraryFile.self, from: data)
-                guard file.format <= Self.format else { throw SyncError.newerFormat(device: devices.last?.name ?? device, format: file.format) }
-                records += file.records
-                counter = max(counter, file.counter)
+                struct Header: Decodable { var format: Int }
+                if let format = (try? JSONDecoder().decode(Header.self, from: data))?.format, format > Self.format {
+                    throw SyncError.newerFormat(device: devices.last(where: { $0.id == device })?.name ?? device, format: format)
+                }
+                if let file = try? JSONDecoder().decode(LibraryFile.self, from: data) {
+                    records += file.records
+                    counter = max(counter, file.counter)
+                } else {
+                    // Half-written or damaged; skip this device until a later sync can read it.
+                    pending += 1
+                }
             } else if try folder.list(path).contains("library.json") {
                 pending += 1
             }

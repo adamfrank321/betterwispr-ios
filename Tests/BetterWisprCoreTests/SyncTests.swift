@@ -233,3 +233,15 @@ private func temporaryFolder() -> URL {
     #expect(!processed.text.lowercased().hasPrefix("um"))
     #expect(processed.settings.tone(for: .work) == .casual)
 }
+
+@Test func aDamagedFileFromAnotherDeviceIsSkippedNotFatal() throws {
+    let folder = MemorySyncFolder(), journals = temporaryFolder()
+    defer { try? FileManager.default.removeItem(at: journals) }
+    var mac = Device("mac", folder: folder, journals: journals)
+    try folder.write(Data("{\"format\":1,\"device\":\"x\",\"rec".utf8), to: "\(SyncEngine.base)/broken/library.json")
+    mac.library.history = [transcript("Still syncs")]
+    try mac.sync()
+    #expect(mac.last?.pendingDownloads == 1)
+    try folder.write(Data("{\"format\":2,\"device\":\"x\",\"counter\":0,\"records\":[]}".utf8), to: "\(SyncEngine.base)/newer/library.json")
+    #expect(throws: SyncError.self) { try mac.sync() }
+}
