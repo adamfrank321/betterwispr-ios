@@ -68,6 +68,29 @@ The keyboard can't record. iOS doesn't give keyboard extensions the microphone. 
 
 ## State at last update
 
-See TASKS.md for the live list. In short: CI is set up and the unchanged desktop app builds and passes its tests on it. The shared library does not yet build for iOS. Sync engine, iOS app and desktop sync are not written yet.
+- `main`: desktop app with sync, shared library building for iOS, sync engine and tests. CI green.
+- `agent/ios-app`: the iOS app, keyboard and tests on top of `main`. CI builds the app and keyboard and runs 5 iOS unit tests; all pass. Merge into `main` once the latest run is green.
+- Nothing has been run on a real iPhone or Mac yet. The things most likely to need fixes on a device: the keyboard opening the app (responder-chain call), recording in the background during the warm session, model downloads, and iCloud Drive folder access from the Files picker.
+- One upstream desktop test (`meetingAudioThroughSpeechAndNotesAPIsPersistsAndExports`) failed once and passed on re-run; it shares a static HTTP stub across parallel tests. Not caused by this work.
 
-Parallel helper agents were planned (Opus for porting and the keyboard bridge, Sonnet for iOS screens) but their launch was declined in the session, so work is proceeding in a single session for now.
+## Reading CI from the agent sandbox
+
+Raw logs can't be downloaded from the sandbox. The workflow turns compiler errors, failing tests and test counts into check annotations:
+
+    gh run list -R adamfrank321/betterwispr-ios -L 3
+    gh run view <run id> -R adamfrank321/betterwispr-ios --json jobs --jq '.jobs[]|"\(.name) \(.conclusion) \(.databaseId)"'
+    gh api repos/adamfrank321/betterwispr-ios/check-runs/<job id>/annotations --jq '.[]|.message'
+
+Pushing to a branch cancels that branch's running CI. The iOS job takes about 15 minutes, most of it the simulator tests.
+
+## iOS code map
+
+- `iOS/App/Model/MobileModel.swift` library, saving, learning from corrections, adopting synced changes
+- `iOS/App/Model/DictationSession.swift` one dictation at a time; the warm keyboard session
+- `iOS/App/Model/MeetingRecorderModel.swift` meeting recording in pieces, speaker detection, notes
+- `iOS/App/Model/ModelManager.swift` model downloads and loading
+- `iOS/App/Model/MobileSync.swift` folder bookmark and sync schedule
+- `iOS/App/Audio/AudioCapture.swift` microphone engine and file writing
+- `iOS/Shared/KeyboardBridge.swift` App Group messages between app and keyboard
+- `iOS/Keyboard/` the keyboard extension
+- `iOS/App/Views/` SwiftUI screens
