@@ -119,6 +119,8 @@ final class AppModel {
     var onShowNotetaker: ((UUID) -> Void)?
 
     @ObservationIgnored private let store: LocalStore
+    /// Syncs history, vocabulary, modes, shared settings and meetings through a folder the user picks.
+    @ObservationIgnored private(set) var sync: SyncCoordinator!
     @ObservationIgnored private let recorder = AudioRecorder()
     @ObservationIgnored private let startsServices: Bool
     @ObservationIgnored private let correctionWatcher = CorrectionWatcher()
@@ -174,7 +176,11 @@ final class AppModel {
             storageIsReadable = false
             statusMessage = "Could not read your saved workspace. It has been left untouched: \(error.localizedDescription)"
         }
+        sync = SyncCoordinator(model: self, workspace: store.directory)
         guard startsServices else { return }
+        // A meeting saves every few seconds while it records; let it settle before syncing.
+        meetings.onSaved = { [weak self] in self?.sync.schedule(after: .seconds(15)) }
+        if storageIsReadable { sync.start() }
         applyAppearance()
         migrateLegacyOnboarding()
         if !models.contains(where: { $0.id == settings.selectedModelID }) { settings.selectedModelID = "apple" }
@@ -952,7 +958,31 @@ final class AppModel {
         }
     }
 
-    private func persist() throws {
+    /// What sync sends and compares: the workspace plus saved meetings.
+    var syncLibrary: SyncLibrary {
+        SyncLibrary(settings: settings, history: history, vocabulary: vocabulary,
+                    meetings: meetings.meetings, unreadableMeetings: meetings.unreadableIDs)
+    }
+
+    /// Takes in what other devices changed. Throws when the workspace can't be saved, so the sync isn't recorded as done.
+    func adoptSynced(_ result: SyncResult) throws {
+        if result.workspaceChanged {
+            let previous = (settings, history, vocabulary)
+            settings = result.library.settings
+            history = result.library.history
+            vocabulary = result.library.vocabulary
+            do { try persist(schedulesSync: false) } catch {
+                (settings, history, vocabulary) = previous
+                throw error
+            }
+            applyAppearance()
+            meetings.notesSettings = settings
+            onPresentationChange?()
+        }
+        meetings.applySynced(updated: result.updatedMeetings, deleted: result.deletedMeetings)
+    }
+
+    private func persist(schedulesSync: Bool = true) throws {
         guard storageIsReadable else {
             throw NSError(domain: "BetterWispr", code: 1, userInfo: [NSLocalizedDescriptionKey:
                 "The existing workspace could not be read, so it will not be overwritten. Back it up in \(store.directory.path) and restart."])
@@ -962,6 +992,7 @@ final class AppModel {
         state.history = history
         state.vocabulary = vocabulary
         try store.save(state)
+        if schedulesSync { sync?.schedule() }
     }
 
     func exportHistory() {

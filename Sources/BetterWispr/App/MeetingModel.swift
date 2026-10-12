@@ -36,6 +36,10 @@ final class MeetingModel {
     var showsCallAudioHint = false
     var notesSettings = AppSettings()
     var ollamaModels: [String] = []
+    /// Meetings whose files couldn't be read; sync never treats them as deleted.
+    private(set) var unreadableIDs: Set<UUID> = []
+    /// Called after a meeting is saved or deleted, so sync can follow.
+    @ObservationIgnored var onSaved: (() -> Void)?
     var notesAvailability: NotesAvailability { MeetingNotesGenerator.availability(settings: notesSettings) }
 
     @ObservationIgnored private let store: MeetingStore
@@ -60,6 +64,7 @@ final class MeetingModel {
         if store == nil { Self.removeLeftoverAudio() }
         let loaded = self.store.load()
         meetings = loaded.meetings
+        unreadableIDs = Set(loaded.unreadable.compactMap { UUID(uuidString: $0.deletingPathExtension().lastPathComponent) })
         if !loaded.unreadable.isEmpty {
             let count = loaded.unreadable.count
             message = "\(count) meeting \(count == 1 ? "file" : "files") in \(self.store.directory.path) couldn’t be read and \(count == 1 ? "was" : "were") left untouched."
@@ -220,6 +225,27 @@ final class MeetingModel {
         }
         meetings.removeAll { $0.id == id }
         if selectedID == id { selectedID = nil }
+        onSaved?()
+    }
+
+    /// Saves meetings another device added or edited and removes ones it deleted. The meeting being recorded is left alone;
+    /// its next save wins over the other device's change.
+    func applySynced(updated: [Meeting], deleted: Set<UUID>) {
+        for meeting in updated where !isActive(meeting.id) {
+            saves.removeValue(forKey: meeting.id)?.cancel()
+            do { try store.save(meeting) } catch {
+                message = "A synced meeting couldn’t be saved. \(error.localizedDescription)"
+                continue
+            }
+            if let index = meetings.firstIndex(where: { $0.id == meeting.id }) { meetings[index] = meeting } else { meetings.append(meeting) }
+        }
+        for id in deleted where !isActive(id) {
+            saves.removeValue(forKey: id)?.cancel()
+            do { try store.delete(id: id) } catch { continue }
+            meetings.removeAll { $0.id == id }
+            if selectedID == id { selectedID = nil }
+        }
+        if !updated.isEmpty { meetings.sort { $0.createdAt > $1.createdAt } }
     }
 
     func copy(_ id: UUID, transcriptOnly: Bool = false) {
@@ -404,7 +430,10 @@ final class MeetingModel {
     private func saveNow(_ id: UUID) {
         saves.removeValue(forKey: id)?.cancel()
         guard let meeting = meeting(id) else { return }
-        do { try store.save(meeting) } catch { message = "This meeting couldn’t be saved. \(error.localizedDescription)" }
+        do {
+            try store.save(meeting)
+            onSaved?()
+        } catch { message = "This meeting couldn’t be saved. \(error.localizedDescription)" }
     }
 
     private func discardIfEmpty(_ id: UUID) {

@@ -106,6 +106,8 @@ struct SettingsView: View {
                     SettingToggle("Save dictation history", caption: "Keep text on this Mac so you can find and reuse it.", isOn: setting(\.saveHistory))
                 }
 
+                SyncSettingsSection(sync: model.sync)
+
                 SettingsSection("Permissions") {
                     PermissionStatusRow(title: "Microphone", caption: "Needed to hear your voice.", granted: model.microphoneGranted, action: model.requestMicrophone)
                     RowDivider()
@@ -428,5 +430,62 @@ struct PermissionStatusRow: View {
                     .transition(.opacity)
             }
         }
+    }
+}
+
+/// Picks the folder that syncs this Mac's library with BetterWispr on other devices, such as an iPhone.
+private struct SyncSettingsSection: View {
+    let sync: SyncCoordinator
+
+    var body: some View {
+        SettingsSection("Sync") {
+            SettingRow("Sync folder", caption: folderCaption) {
+                HStack(spacing: 8) {
+                    if sync.folder == nil, let iCloud = SyncCoordinator.iCloudDrive {
+                        Button("Use iCloud Drive") { sync.choose(iCloud) }
+                    }
+                    Button(sync.folder == nil ? "Choose…" : "Change…", action: choose)
+                }
+            }
+            if sync.folder != nil {
+                RowDivider()
+                SettingRow("Status", caption: statusCaption) {
+                    HStack(spacing: 8) {
+                        if sync.isSyncing { ProgressView().controlSize(.small) }
+                        Button("Sync now") { Task { await sync.syncNow() } }
+                            .disabled(sync.isSyncing)
+                        Button("Stop syncing", role: .destructive) { sync.stop() }
+                    }
+                }
+            }
+        } footer: {
+            Label("History, vocabulary, writing modes, style settings and meeting notes sync through this folder. Each device writes only its own files there. API keys, your speech model, microphone and shortcut stay on this Mac. Pick the same folder in BetterWispr on your iPhone.", systemImage: "arrow.triangle.2.circlepath")
+        }
+    }
+
+    private var folderCaption: String {
+        guard let folder = sync.folder else { return "Off. Choose a folder that syncs between your devices, such as iCloud Drive." }
+        if let iCloud = SyncCoordinator.iCloudDrive, folder.standardizedFileURL == iCloud.standardizedFileURL { return "iCloud Drive" }
+        return folder.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+    }
+
+    private var statusCaption: String {
+        if let problem = sync.problem { return problem }
+        guard let last = sync.lastSync else { return sync.isSyncing ? "Syncing…" : "Waiting for the first sync." }
+        let others = sync.devices.isEmpty ? "No other devices yet" : sync.devices.map(\.name).joined(separator: ", ")
+        let waiting = sync.pendingDownloads > 0 ? " Waiting for iCloud to download \(sync.pendingDownloads) file\(sync.pendingDownloads == 1 ? "" : "s")." : ""
+        return "Synced \(last.formatted(.relative(presentation: .named))). \(others).\(waiting)"
+    }
+
+    private func choose() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Sync Here"
+        panel.message = "BetterWispr keeps its sync files in a BetterWispr folder inside the one you choose."
+        panel.directoryURL = sync.folder ?? SyncCoordinator.iCloudDrive
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        sync.choose(url)
     }
 }
