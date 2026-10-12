@@ -60,8 +60,37 @@ struct KeyboardBridge: Sendable {
 
     let suiteName: String?
 
-    init(suiteName: String? = Bundle.main.object(forInfoDictionaryKey: "BetterWisprAppGroup") as? String) {
+    init(suiteName: String? = KeyboardBridge.appGroup) {
         self.suiteName = suiteName
+    }
+
+    /// The App Group this build can actually use. Builds re-signed by a sideloading service usually get the signer's
+    /// group instead of the one in Info.plist, so fall back to the groups in the embedded provisioning profile.
+    static let appGroup: String? = {
+        let configured = Bundle.main.object(forInfoDictionaryKey: "BetterWisprAppGroup") as? String
+        let usable = { (group: String) in FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil }
+        if let configured, usable(configured) { return configured }
+        let provisioned = provisionedAppGroups(Bundle.main)
+        // Prefer a group named like ours, then any usable one, so app and keyboard pick the same group.
+        return provisioned.first { $0.hasSuffix("betterwispr.shared") && usable($0) }
+            ?? provisioned.sorted().first(where: usable)
+            ?? configured
+    }()
+
+    /// App Groups listed in the bundle's embedded.mobileprovision, an XML property list inside a signed envelope.
+    static func provisionedAppGroups(_ bundle: Bundle) -> [String] {
+        guard let url = bundle.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url) else { return [] }
+        return provisionedAppGroups(profile: data)
+    }
+
+    static func provisionedAppGroups(profile data: Data) -> [String] {
+        let text = String(decoding: data, as: UTF8.self)
+        guard let start = text.range(of: "<?xml"),
+              let end = text.range(of: "</plist>", range: start.upperBound..<text.endIndex) else { return [] }
+        guard let plist = try? PropertyListSerialization.propertyList(from: Data(text[start.lowerBound..<end.upperBound].utf8), format: nil) as? [String: Any],
+              let entitlements = plist["Entitlements"] as? [String: Any] else { return [] }
+        return entitlements["com.apple.security.application-groups"] as? [String] ?? []
     }
 
     private var defaults: UserDefaults { suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard }

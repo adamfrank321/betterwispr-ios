@@ -53,3 +53,17 @@ import Testing
     tracker.observe(before: "A completely different and much much longer paragraph that the user typed instead of fixing.", after: "")
     #expect(tracker.finish() == nil)
 }
+
+@Test func appGroupsAreReadFromAProvisioningProfile() {
+    let plist = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0"><dict><key>Entitlements</key><dict>
+    <key>com.apple.security.application-groups</key><array><string>group.ABCDE12345.betterwispr.shared</string></array>
+    </dict></dict></plist>
+    """
+    // A real profile wraps the plist in binary signature data.
+    let profile = Data([0x30, 0x82, 0xFF, 0x00]) + Data(plist.utf8) + Data([0xA0, 0x00, 0xFE])
+    #expect(KeyboardBridge.provisionedAppGroups(profile: profile) == ["group.ABCDE12345.betterwispr.shared"])
+    #expect(KeyboardBridge.provisionedAppGroups(profile: Data([1, 2, 3])).isEmpty)
+}
