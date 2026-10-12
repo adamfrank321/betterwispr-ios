@@ -1,0 +1,105 @@
+name: BetterWisprMobile
+options:
+  bundleIdPrefix: org.betterwispr
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+packages:
+  BetterWispr:
+    path: ..
+targets:
+  BetterWisprMobile:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    dependencies:
+      - package: BetterWispr
+        product: BetterWisprCore
+      - target: BetterWisprKeyboard
+        embed: true
+    entitlements:
+      path: App/BetterWisprMobile.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.org.betterwispr.shared
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: BetterWispr
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIBackgroundModes: [audio]
+        NSMicrophoneUsageDescription: BetterWispr listens while you dictate or record a meeting. Built-in speech models run on this iPhone.
+        NSSpeechRecognitionUsageDescription: Apple on-device speech recognition turns your voice into text on this iPhone.
+        CFBundleURLTypes:
+          - CFBundleURLName: org.betterwispr.mobile
+            CFBundleURLSchemes: [betterwispr]
+        BetterWisprAppGroup: group.org.betterwispr.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.betterwispr.mobile
+  BetterWisprKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Keyboard
+      - Shared
+    entitlements:
+      path: Keyboard/BetterWisprKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.org.betterwispr.shared
+    info:
+      path: Keyboard/Info.plist
+      properties:
+        CFBundleDisplayName: BetterWispr
+        BetterWisprAppGroup: group.org.betterwispr.shared
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: en-US
+            RequestsOpenAccess: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.betterwispr.mobile.keyboard
+        APPLICATION_EXTENSION_API_ONLY: YES
+  BetterWisprMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: BetterWisprMobile
+      - package: BetterWispr
+        product: BetterWisprCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  BetterWisprMobile:
+    build:
+      targets:
+        BetterWisprMobile: all
+        BetterWisprKeyboard: all
+    test:
+      targets:
+        - BetterWisprMobileTests
