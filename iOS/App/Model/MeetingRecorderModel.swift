@@ -44,6 +44,10 @@ final class MeetingRecorderModel {
         self.model = model
         self.models = models
         capture.onLevel = { [weak self] level in self?.receive(level) }
+        capture.onInterrupted = { [weak self] in
+            self?.message = "Recording stopped because another app or a call took the microphone."
+            self?.stop()
+        }
     }
 
     var activeMeetingID: UUID? {

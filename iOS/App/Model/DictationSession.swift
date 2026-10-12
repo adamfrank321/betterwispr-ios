@@ -40,6 +40,11 @@ final class DictationSession {
         self.model = model
         self.models = models
         capture.onLevel = { [weak self] level in self?.receive(level) }
+        // Transcribe what was said before a call or another app took the microphone.
+        capture.onInterrupted = { [weak self] in
+            self?.stop()
+            self?.sessionEnds = nil
+        }
         commandObserver = DarwinObserver(KeyboardBridge.commandSent) { [weak self] in self?.handleKeyboardCommand() }
         // A session from before the app was last closed is gone; tell the keyboard.
         bridge.update { $0.phase = .idle; $0.sessionEnds = nil; $0.level = 0 }

@@ -28,6 +28,29 @@ final class AudioCapture {
     private let engine = AVAudioEngine()
     private let writer = CaptureWriter()
     private var meter = VoiceLevelMeter()
+    private var observers: [any NSObjectProtocol] = []
+
+    init() {
+        // A call, Siri or a route change stops the engine; forget it was running so the next recording starts it again.
+        let stopped: @Sendable (Notification) -> Void = { [weak self] _ in
+            MainActor.assumeIsolated { self?.engineStopped() }
+        }
+        observers = [
+            NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main, using: stopped),
+            NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main, using: stopped),
+        ]
+    }
+
+    /// Called when audio stopped underneath a recording; the recording so far is kept and closes normally.
+    var onInterrupted: (@MainActor () -> Void)?
+
+    private func engineStopped() {
+        guard isRunning else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        isRunning = false
+        if isRecording { onInterrupted?() }
+    }
 
     static func requestPermission() async -> Bool {
         switch AVAudioApplication.shared.recordPermission {
