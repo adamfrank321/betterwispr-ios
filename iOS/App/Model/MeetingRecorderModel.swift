@@ -86,9 +86,10 @@ final class MeetingRecorderModel {
             }
         }
         // Recording starts first so no words are lost while the model loads; pieces wait in the queue until it's ready.
+        let models = models, language = language
         Task { [weak self] in
             do {
-                let provider = try await models.provider(for: selected, language: self?.language)
+                let provider = try await models.provider(for: selected, language: language)
                 self?.provider = provider
                 self?.drainQueue(meeting.id)
             } catch {
