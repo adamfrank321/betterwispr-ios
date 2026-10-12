@@ -30,6 +30,9 @@ struct BetterWisprMobileApp: App {
 /// Owns the long-lived pieces so views share one of each.
 @MainActor @Observable
 final class AppState {
+    /// The running app's state, for App Intents, which the system creates outside the view hierarchy.
+    static weak var current: AppState?
+
     let model: MobileModel
     let models: ModelManager
     let session: DictationSession
@@ -45,6 +48,7 @@ final class AppState {
         self.meetings = meetings
         session = DictationSession(model: model, models: models)
         sync = MobileSync(model: model, activeMeeting: { [weak meetings] in meetings?.activeMeetingID })
+        Self.current = self
     }
 
     var colorScheme: ColorScheme? {
