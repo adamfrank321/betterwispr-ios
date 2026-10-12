@@ -1,23 +1,34 @@
 # Task list
 
 Status: [x] done, [~] in progress, [ ] not started. Update on every push.
+"Built" means it compiles in CI. "Device-tested" means someone ran it on a real iPhone or Mac; nothing is device-tested yet.
 
 1. [x] Read desktop changelog and source; map storage and features
 2. [x] Fork into adamfrank321/betterwispr-ios with full upstream history
-3. [x] CI on GitHub macOS runners (desktop build and tests pass on unchanged code)
-4. [~] Make BetterWisprCore build for iOS (add iOS platform, guard macOS-only code without changing the saved file format)
-5. [ ] Sync engine in Core (per-device files, Lamport stamps, tombstones) with unit tests
-6. [ ] Move the dictation cleanup steps from the Mac AppModel into a shared DictationProcessor, Mac app uses it unchanged
-7. [ ] Mac app: sync folder setting, sync on launch, after saves and on a timer, merge incoming changes
-8. [ ] iOS app shell (XcodeGen project, App Group, onboarding, Home)
-9. [ ] iOS dictation (recording, model download and selection, shared processing, copy and share)
-10. [ ] iOS screens: History, Vocabulary, Style and modes, Models, Insights, Settings, Sync
-11. [ ] Keyboard extension and app handoff for recording
-12. [ ] iOS meetings (record, transcribe, speaker detection, notes)
-13. [ ] Shortcuts action, Action Button and Control Center control
-14. [ ] Independent review and docs check
+3. [x] CI on GitHub macOS runners; errors appear as check annotations (`gh api repos/adamfrank321/betterwispr-ios/check-runs/<job id>/annotations`) because raw logs can't be downloaded from the agent sandbox
+4. [x] BetterWisprCore builds for iOS 17 (macOS-only capture, Accessibility, paste, website and CLI code guarded; saved formats unchanged)
+5. [x] Sync engine with 11 tests, all passing (see SYNC.md)
+6. [x] Shared DictationProcessor; the Mac app uses it with unchanged behaviour
+7. [x] Mac app: Sync card in Settings, sync on launch, after saves, every minute and on activation (built, not device-tested)
+8. [x] iOS app, keyboard, meetings, settings, sync: built in CI on branch `agent/ios-app`
+9. [~] iOS unit tests in the simulator
+10. [ ] Merge `agent/ios-app` into main once tests pass
+11. [ ] App icon and asset catalog (the app has no icon yet)
+12. [ ] Shortcuts action, Action Button and Control Center control (App Intents; widget extension for the control)
+13. [ ] Live Activity while the keyboard session or a meeting is recording
+14. [x] Notes API connections can be added on iOS (connections are per device, like the Mac's; keys stay in each keychain)
+15. [ ] Device testing: keyboard handoff, background warm session, model downloads on cellular, sync with the Mac through iCloud Drive
+16. [ ] Independent review of sync and the iOS app
 
 ## Open questions for Adam
 
-- Bundle ID and Apple team for signing (placeholders used until then)
-- App Store or personal install only (affects keyboard handoff approach and review risk)
+- Bundle ID and Apple team for signing (placeholders `org.betterwispr.mobile` and group `group.org.betterwispr.shared` until then)
+- App Store or personal install only. The keyboard opens the app through the responder chain, which App Review has accepted for other apps but is not an official API.
+- Whether to upstream the sync and iOS-portability changes to opennookorg/betterwispr as a pull request
+
+## Known gaps versus the Mac
+
+- iOS can't see which app or website you're in: tone is picked on the keyboard, modes switch by trigger word only, screen context is just the text around the cursor.
+- Meetings record the phone's microphone only; lines read "Them" until speaker detection labels them Speaker 1, 2…
+- No Claude Code or Codex notes on iPhone; Ollama only if added as an API connection reachable from the phone.
+- User-facing strings inside the shared library still say "Mac" in a few error messages.

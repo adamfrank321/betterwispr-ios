@@ -39,6 +39,8 @@ jobs:
           status=0; swift test > test.log 2>&1 || status=$?
           grep -E "error:|failed|passed after|Executed|Test run" test.log | tail -150 || true
           found=$(grep -E "error:|✘|failed" test.log | sort -u | head -80 || true)
+          summary=$(grep -E "Test run with|Executed [0-9]+ test|TEST (SUCCEEDED|FAILED)" test.log | tail -3 || true)
+          if [ -n "$summary" ]; then echo "::notice title=tests::$(printf '%s' "$summary" | tr '\n' ' ')"; fi
           if [ -n "$found" ]; then echo "::error title=test.log::$(printf '%s' "$found" | sed -e ':a' -e 'N' -e '$!ba' -e 's/%/%25/g' -e 's/\r//g' -e 's/\n/%0A/g')"; fi
           exit $status
 
@@ -104,5 +106,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO test > test.log 2>&1 || status=$?
           grep -E "error:|failed|TEST (SUCCEEDED|FAILED)|Executed" test.log | tail -150 || true
           found=$(grep -E "error:|✘|failed" test.log | sort -u | head -80 || true)
+          summary=$(grep -E "Test run with|Executed [0-9]+ test|TEST (SUCCEEDED|FAILED)" test.log | tail -3 || true)
+          if [ -n "$summary" ]; then echo "::notice title=tests::$(printf '%s' "$summary" | tr '\n' ' ')"; fi
           if [ -n "$found" ]; then echo "::error title=test.log::$(printf '%s' "$found" | sed -e ':a' -e 'N' -e '$!ba' -e 's/%/%25/g' -e 's/\r//g' -e 's/\n/%0A/g')"; fi
           exit $status

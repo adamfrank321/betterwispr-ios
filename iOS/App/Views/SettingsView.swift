@@ -174,36 +174,62 @@ private struct ModelRow: View {
 private struct ConnectionEditor: View {
     @Environment(MobileModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    /// Notes connections are OpenAI-compatible chat completions endpoints; speech connections are transcription APIs.
+    var forNotes = false
     @State private var connection = SpeechConnection()
     @State private var key = ""
     @State private var problem: String?
 
     var body: some View {
         Form {
-            Picker("Provider", selection: $connection.api) {
-                ForEach(SpeechAPI.allCases, id: \.self) { Text($0.name).tag($0) }
+            if forNotes {
+                Section {
+                    TextField("Name", text: $connection.name)
+                    TextField("Chat completions URL", text: $connection.endpoint, prompt: Text("https://…/v1/chat/completions"))
+                        .textInputAutocapitalization(.never).keyboardType(.URL)
+                    TextField("Model ID", text: $connection.modelID).textInputAutocapitalization(.never)
+                    SecureField("API key", text: $key)
+                } footer: {
+                    Text("Any OpenAI-compatible chat completions endpoint, including Ollama on a computer this iPhone can reach. Dictations and meeting text are sent there only when it's your notes model.")
+                }
+            } else {
+                Picker("Provider", selection: $connection.api) {
+                    ForEach(SpeechAPI.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                .onChange(of: connection.api) {
+                    connection.endpoint = connection.api.endpoint
+                    connection.modelID = connection.api.defaultModel
+                    connection.name = connection.api.name
+                }
+                TextField("Name", text: $connection.name)
+                TextField("Endpoint", text: $connection.endpoint).textInputAutocapitalization(.never).keyboardType(.URL)
+                TextField("Model", text: $connection.modelID).textInputAutocapitalization(.never)
+                SecureField("API key", text: $key)
             }
-            .onChange(of: connection.api) {
-                connection.endpoint = connection.api.endpoint
-                connection.modelID = connection.api.defaultModel
-                connection.name = connection.api.name
-            }
-            TextField("Name", text: $connection.name)
-            TextField("Endpoint", text: $connection.endpoint).textInputAutocapitalization(.never).keyboardType(.URL)
-            TextField("Model", text: $connection.modelID).textInputAutocapitalization(.never)
-            SecureField("API key", text: $key)
             if let problem { Text(problem).foregroundStyle(.red) }
             Button("Save") { save() }
         }
-        .navigationTitle("API connection")
+        .navigationTitle(forNotes ? "Notes connection" : "API connection")
+        .onAppear {
+            guard forNotes, connection.api != .openAICompatible else { return }
+            connection.api = .openAICompatible
+            connection.endpoint = ""
+            connection.modelID = ""
+            connection.name = "Notes API"
+        }
     }
 
     private func save() {
         do {
             _ = try connection.validatedURL()
             try connection.validateAPIKey(key)
-            try SpeechAPIKeyStore().save(key, for: connection)
-            model.settings.speechConnections.append(connection)
+            try (forNotes ? SpeechAPIKeyStore.notes : SpeechAPIKeyStore()).save(key, for: connection)
+            if forNotes {
+                model.settings.notesConnections.append(connection)
+                model.settings.notesSelection = .connection(connection.id)
+            } else {
+                model.settings.speechConnections.append(connection)
+            }
             model.save()
             dismiss()
         } catch {
@@ -228,6 +254,9 @@ struct NotesModelView: View {
                 }
             } footer: {
                 Text(footer)
+            }
+            Section {
+                NavigationLink("Add a notes connection") { ConnectionEditor(forNotes: true) }
             }
         }
         .navigationTitle("Notes model")
