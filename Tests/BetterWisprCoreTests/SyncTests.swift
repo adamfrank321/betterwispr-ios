@@ -221,3 +221,15 @@ private func temporaryFolder() -> URL {
     let late = try #require(try folder.read("\(SyncEngine.base)/\(id)/library.json"))
     #expect(!String(decoding: late, as: UTF8.self).contains("\"deleted\":true"))
 }
+
+@MainActor @Test func sharedProcessorAppliesATriggerWordMode() async throws {
+    var settings = AppSettings()
+    let casual = WritingMode(name: "Casual", triggerWords: ["casual mode"], tone: .casual)
+    settings.modes = [casual]
+    let processed = try await DictationProcessor.process("um let's keep it simple casual mode", language: "en", settings: settings,
+                                                         vocabulary: [], startedIn: nil, style: .work)
+    #expect(processed.mode?.id == casual.id)
+    #expect(!processed.text.lowercased().contains("casual mode"))
+    #expect(!processed.text.lowercased().hasPrefix("um"))
+    #expect(processed.settings.tone(for: .work) == .casual)
+}

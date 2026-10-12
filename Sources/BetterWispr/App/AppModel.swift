@@ -421,38 +421,18 @@ final class AppModel {
                 Logger(subsystem: "org.betterwispr.app", category: "DictationTiming").notice("Recognition completed: elapsed=\(String(describing: recognitionStarted.duration(to: .now)), privacy: .public) empty=\(raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)")
                 try Task.checkCancellation()
                 guard self.generation == token else { return }
-                let lightlyCleaned = TranscriptCleaner.clean(raw, language: language)
-                let trigger = recording.settings.modes.match(transcript: lightlyCleaned)
-                let mode = trigger?.mode ?? recording.mode
-                let writingSettings = recording.settings.applying(mode)
-                let cleanup = writingSettings.cleanup
-                let tone = writingSettings.tone(for: AppCategory(bundleID: appBundleID).style)
-                let base = cleanup == .none ? raw.trimmingCharacters(in: .whitespacesAndNewlines) : lightlyCleaned
-                let cleaned = trigger.flatMap { [$0.mode].match(transcript: base)?.transcript } ?? base
-                let sharesContext = recording.settings.sharesContext(startedIn: recording.mode, trigger: trigger?.mode)
-                if !sharesContext { context?.cancel() }
-                let heard = VocabularyProcessor.correctedCommands(entries, in: cleaned)
-                var spoken = language == nil || language?.hasPrefix("en") == true ? VoiceCommands.apply(heard.text) : heard.text
-                let english = TranscriptCleaner.isEnglish(spoken, language: language)
-                if english, let email = EmailDictation.compose(spoken) {
-                    spoken = email
-                } else if english, cleanup == .medium, MeetingNotesGenerator.availability(settings: writingSettings) == .available {
-                    self.statusMessage = "Editing with \(writingSettings.notesModelName)…"
-                    let polished = await TranscriptPolisher.polish(spoken, settings: writingSettings, vocabulary: VocabularyProcessor.hints(entries),
-                                                                   context: sharesContext ? await context?.value(within: .seconds(1)) : nil,
-                                                                   instructions: mode?.instructions ?? "")
-                    try Task.checkCancellation()
-                    guard self.generation == token else { return }
-                    spoken = StyleFormatter.apply(tone, to: polished ?? spoken)
-                } else if english {
-                    spoken = StyleFormatter.apply(tone, to: spoken)
-                }
-                let (text, fixes) = VocabularyProcessor.corrected(entries, in: spoken)
+                let processed = try await DictationProcessor.process(
+                    raw, language: language, settings: recording.settings, vocabulary: entries, startedIn: recording.mode,
+                    style: AppCategory(bundleID: appBundleID).style, context: context,
+                    onEditing: { [weak self] status in self?.statusMessage = status })
+                guard self.generation == token else { return }
+                let text = processed.text
+                let writingSettings = processed.settings
                 guard !text.isEmpty else { self.fail(.noSpeech); return }
                 self.partialTranscript = text
                 let transcript = Transcript(text: text, rawText: raw, duration: audio.duration,
                                             modelName: model.name, language: language ?? "auto",
-                                            appBundleID: appBundleID, vocabularyFixes: fixes + heard.fixes + provider.vocabularyFixes)
+                                            appBundleID: appBundleID, vocabularyFixes: processed.vocabularyFixes + provider.vocabularyFixes)
                 var persistenceWarning: String?
                 if writingSettings.saveHistory {
                     self.history.insert(transcript, at: 0)
