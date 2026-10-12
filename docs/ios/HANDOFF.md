@@ -94,3 +94,9 @@ Pushing to a branch cancels that branch's running CI. The iOS job takes about 15
 - `iOS/Shared/KeyboardBridge.swift` App Group messages between app and keyboard
 - `iOS/Keyboard/` the keyboard extension
 - `iOS/App/Views/` SwiftUI screens
+
+## Sideloading (Signulous and similar)
+
+The `Unsigned IPA` workflow (`.github/workflows/ipa.yml`) builds `BetterWispr-unsigned.ipa`, with the keyboard extension inside, on every push to main that touches the iOS app or shared library, or on demand from the Actions tab. Download it from the run's Artifacts section (it arrives zipped; unzip to get the .ipa) and upload that to the signing service.
+
+Signing services usually replace the App Group with their own. `KeyboardBridge.appGroup` reads the group from the embedded provisioning profile when the one in Info.plist isn't usable, so the keyboard and app still share state, as long as the service gives both the app and the keyboard the same group. If the keyboard never hears back from the app after sideloading, that's the first thing to check.
